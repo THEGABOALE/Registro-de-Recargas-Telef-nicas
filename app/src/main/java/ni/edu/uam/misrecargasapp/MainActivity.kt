@@ -7,6 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -32,6 +33,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import ni.edu.uam.misrecargasapp.ui.theme.MisRecargasAppTheme
+import ni.edu.uam.misrecargasapp.ui.theme.RecargasTopAppBar
+import ni.edu.uam.misrecargasapp.ui.theme.TipoRecargaTab
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -79,156 +82,103 @@ enum class VistaActual {
     REGISTRO, HISTORIAL, PROMOCIONES
 }
 
+// Mapea cada TipoRecargaTab a los tipos de recarga del historial que le corresponden
+fun HistorialRecarga.matchTab(tab: TipoRecargaTab): Boolean = when (tab) {
+    TipoRecargaTab.TODO      -> true
+    TipoRecargaTab.SALDO     -> tipo.equals("Saldo", ignoreCase = true)
+    TipoRecargaTab.INTERNET  -> tipo.contains("Internet", ignoreCase = true) ||
+            tipo.contains("Datos",    ignoreCase = true) ||
+            tipo.contains("Superpack",ignoreCase = true) ||
+            tipo.contains("Mega",     ignoreCase = true)
+    TipoRecargaTab.MINUTOS   -> tipo.contains("Minutos",  ignoreCase = true)
+    TipoRecargaTab.SMS       -> tipo.contains("SMS",      ignoreCase = true)
+    TipoRecargaTab.COMBO     -> tipo.contains("Combo",    ignoreCase = true) ||
+            tipo.contains("Pack",     ignoreCase = true)
+    TipoRecargaTab.PROMOCION -> tipo.equals("Promoción",  ignoreCase = true)
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MisRecargasScreen() {
 
     val paises = listOf(
-        PaisTelefono("Nicaragua", "+505", 8, "88887777"),
-        PaisTelefono("Honduras", "+504", 8, "99998888"),
+        PaisTelefono("Nicaragua",  "+505", 8, "88887777"),
+        PaisTelefono("Honduras",   "+504", 8, "99998888"),
         PaisTelefono("Costa Rica", "+506", 8, "88887777")
     )
 
     val opcionesCompania = listOf("Claro", "Tigo", "Movistar")
 
     val tiposPorCompania = mapOf(
-        "Claro" to listOf("Saldo", "Superpack", "Internet", "Minutos", "SMS"),
-        "Tigo" to listOf("Saldo", "MegaPack", "Internet", "Minutos", "Combo"),
+        "Claro"    to listOf("Saldo", "Superpack", "Internet", "Minutos", "SMS"),
+        "Tigo"     to listOf("Saldo", "MegaPack",  "Internet", "Minutos", "Combo"),
         "Movistar" to listOf("Saldo", "Paquete de datos", "Minutos", "SMS", "Combo")
     )
 
-    // Promociones inspiradas en catálogos prepago reales vistos públicamente en Nicaragua
     val promociones = listOf(
-        PromocionRecarga(
-            id = 1,
-            compania = "Claro",
-            nombre = "Superpack 4 días",
-            precio = 65,
-            categoria = "Internet + SMS",
-            descripcion = "4 GB + 100 SMS a Claro y otros operadores",
-            vigencia = "4 días"
-        ),
-        PromocionRecarga(
-            id = 2,
-            compania = "Claro",
-            nombre = "Superpack 6 días",
-            precio = 90,
-            categoria = "Internet + SMS",
-            descripcion = "5 GB + 1000 SMS a Claro y otros operadores",
-            vigencia = "6 días"
-        ),
-        PromocionRecarga(
-            id = 3,
-            compania = "Tigo",
-            nombre = "MEGA2",
-            precio = 40,
-            categoria = "Internet + Apps",
-            descripcion = "1.3 GB + apps incluidas",
-            vigencia = "2 días"
-        ),
-        PromocionRecarga(
-            id = 4,
-            compania = "Tigo",
-            nombre = "MEGA4",
-            precio = 65,
-            categoria = "Internet + Minutos",
-            descripcion = "3 GB + 80 minutos + apps incluidas",
-            vigencia = "4 días"
-        ),
-        PromocionRecarga(
-            id = 5,
-            compania = "Tigo",
-            nombre = "MEGA6",
-            precio = 90,
-            categoria = "Internet + Minutos",
-            descripcion = "4 GB + 10 minutos multiusos",
-            vigencia = "6 días"
-        ),
-        PromocionRecarga(
-            id = 6,
-            compania = "Tigo",
-            nombre = "MEGA7",
-            precio = 120,
-            categoria = "Internet + Minutos",
-            descripcion = "6 GB + 15 minutos multiusos",
-            vigencia = "7 días"
-        ),
-        PromocionRecarga(
-            id = 7,
-            compania = "Tigo",
-            nombre = "MEGA15",
-            precio = 220,
-            categoria = "Internet + Minutos",
-            descripcion = "8 GB + 20 minutos multiusos",
-            vigencia = "15 días"
-        ),
-        // Para Movistar lo dejamos como ejemplos de demo, sin afirmar oferta oficial actual
-        PromocionRecarga(
-            id = 8,
-            compania = "Movistar",
-            nombre = "Combo Datos 3 días",
-            precio = 50,
-            categoria = "Internet + Minutos",
-            descripcion = "1.5 GB + minutos nacionales",
-            vigencia = "3 días"
-        ),
-        PromocionRecarga(
-            id = 9,
-            compania = "Movistar",
-            nombre = "Combo Full 7 días",
-            precio = 100,
-            categoria = "Internet + Minutos + SMS",
-            descripcion = "4 GB + minutos + SMS",
-            vigencia = "7 días"
-        )
+        PromocionRecarga(1, "Claro",    "Superpack 4 días",   65,  "Internet + SMS",           "4 GB + 100 SMS a Claro y otros operadores",  "4 días"),
+        PromocionRecarga(2, "Claro",    "Superpack 6 días",   90,  "Internet + SMS",           "5 GB + 1000 SMS a Claro y otros operadores", "6 días"),
+        PromocionRecarga(3, "Tigo",     "MEGA2",              40,  "Internet + Apps",          "1.3 GB + apps incluidas",                    "2 días"),
+        PromocionRecarga(4, "Tigo",     "MEGA4",              65,  "Internet + Minutos",       "3 GB + 80 minutos + apps incluidas",         "4 días"),
+        PromocionRecarga(5, "Tigo",     "MEGA6",              90,  "Internet + Minutos",       "4 GB + 10 minutos multiusos",                "6 días"),
+        PromocionRecarga(6, "Tigo",     "MEGA7",              120, "Internet + Minutos",       "6 GB + 15 minutos multiusos",                "7 días"),
+        PromocionRecarga(7, "Tigo",     "MEGA15",             220, "Internet + Minutos",       "8 GB + 20 minutos multiusos",                "15 días"),
+        PromocionRecarga(8, "Movistar", "Combo Datos 3 días", 50,  "Internet + Minutos",       "1.5 GB + minutos nacionales",                "3 días"),
+        PromocionRecarga(9, "Movistar", "Combo Full 7 días",  100, "Internet + Minutos + SMS", "4 GB + minutos + SMS",                       "7 días")
     )
 
-    var vistaActual by remember { mutableStateOf(VistaActual.REGISTRO) }
-
-    var paisSeleccionado by remember { mutableStateOf(paises[0]) }
-    var telefono by remember { mutableStateOf("") }
-    var monto by remember { mutableStateOf("") }
-    var companiaSeleccionada by remember { mutableStateOf("") }
+    var vistaActual             by remember { mutableStateOf(VistaActual.REGISTRO) }
+    var tabSeleccionado         by remember { mutableStateOf(TipoRecargaTab.TODO) }
+    var paisSeleccionado        by remember { mutableStateOf(paises[0]) }
+    var telefono                by remember { mutableStateOf("") }
+    var monto                   by remember { mutableStateOf("") }
+    var companiaSeleccionada    by remember { mutableStateOf("") }
     var tipoRecargaSeleccionado by remember { mutableStateOf("") }
-    var mostrarConfirmacion by remember { mutableStateOf(false) }
-    var promocionSeleccionada by remember { mutableStateOf<PromocionRecarga?>(null) }
+    var mostrarConfirmacion     by remember { mutableStateOf(false) }
+    var promocionSeleccionada   by remember { mutableStateOf<PromocionRecarga?>(null) }
+    var historial               by remember { mutableStateOf(listOf<HistorialRecarga>()) }
 
-    var historial by remember { mutableStateOf(listOf<HistorialRecarga>()) }
-
-    var expandedPais by remember { mutableStateOf(false) }
-    var expandedCompania by remember { mutableStateOf(false) }
+    var expandedPais        by remember { mutableStateOf(false) }
+    var expandedCompania    by remember { mutableStateOf(false) }
     var expandedTipoRecarga by remember { mutableStateOf(false) }
 
     val tiposDisponibles = tiposPorCompania[companiaSeleccionada] ?: emptyList()
-    val promocionesFiltradas = if (companiaSeleccionada.isBlank()) {
-        promociones
-    } else {
-        promociones.filter { it.compania == companiaSeleccionada }
+
+    // Filtro de promociones: tab + compañía
+    val promocionesFiltradas = promociones.filter { promo ->
+        val matchCompania = companiaSeleccionada.isBlank() || promo.compania == companiaSeleccionada
+        val matchTab = when (tabSeleccionado) {
+            TipoRecargaTab.TODO      -> true
+            TipoRecargaTab.SALDO     -> promo.categoria.contains("Saldo",    ignoreCase = true)
+            TipoRecargaTab.INTERNET  -> promo.categoria.contains("Internet", ignoreCase = true)
+            TipoRecargaTab.MINUTOS   -> promo.categoria.contains("Minutos",  ignoreCase = true)
+            TipoRecargaTab.SMS       -> promo.categoria.contains("SMS",      ignoreCase = true)
+            TipoRecargaTab.COMBO     -> promo.categoria.contains("Combo",    ignoreCase = true) ||
+                    promo.categoria.contains("Apps",     ignoreCase = true)
+            TipoRecargaTab.PROMOCION -> true
+        }
+        matchCompania && matchTab
     }
 
-    val telefonoValido = telefono.length == paisSeleccionado.longitud
-    val montoValido = monto.toIntOrNull()?.let { it > 0 } == true
+    // Filtro de historial: tab
+    val historialFiltrado = historial.filter { it.matchTab(tabSeleccionado) }
+
+    val telefonoValido  = telefono.length == paisSeleccionado.longitud
+    val montoValido     = monto.toIntOrNull()?.let { it > 0 } == true
     val usandoPromocion = promocionSeleccionada != null
 
-    val puedeRegistrar = if (usandoPromocion) {
-        telefonoValido &&
-                companiaSeleccionada.isNotEmpty() &&
-                promocionSeleccionada != null
-    } else {
-        telefonoValido &&
-                montoValido &&
-                companiaSeleccionada.isNotEmpty() &&
-                tipoRecargaSeleccionado.isNotEmpty()
-    }
+    val puedeRegistrar = if (usandoPromocion)
+        telefonoValido && companiaSeleccionada.isNotEmpty() && promocionSeleccionada != null
+    else
+        telefonoValido && montoValido && companiaSeleccionada.isNotEmpty() && tipoRecargaSeleccionado.isNotEmpty()
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        text = "Mis Recargas",
-                        fontWeight = FontWeight.ExtraBold
-                    )
+            RecargasTopAppBar(
+                vistaActual         = vistaActual,
+                onVistaSeleccionada = {
+                    vistaActual     = it
+                    tabSeleccionado = TipoRecargaTab.TODO  // reset al cambiar de sección
                 }
             )
         }
@@ -238,44 +188,43 @@ fun MisRecargasScreen() {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(20.dp)
+                .padding(horizontal = 20.dp)
+                .padding(top = 16.dp)
         ) {
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                FilterChip(
-                    selected = vistaActual == VistaActual.REGISTRO,
-                    onClick = { vistaActual = VistaActual.REGISTRO },
-                    label = { Text("Registrar") },
-                    leadingIcon = {
-                        Icon(Icons.Default.AttachMoney, contentDescription = null)
+            // ── Chips de tipo: solo visibles en Historial y Promociones ───
+            if (vistaActual != VistaActual.REGISTRO) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    TipoRecargaTab.entries.forEach { tab ->
+                        val sel = tab == tabSeleccionado
+                        FilterChip(
+                            selected    = sel,
+                            onClick     = { tabSeleccionado = tab },
+                            label       = {
+                                Text(tab.etiqueta, fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal)
+                            },
+                            leadingIcon = {
+                                Icon(tab.icono, contentDescription = tab.etiqueta, modifier = Modifier.size(16.dp))
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor   = tab.color,
+                                selectedLabelColor       = MaterialTheme.colorScheme.onPrimary,
+                                selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
+                            )
+                        )
                     }
-                )
-
-                FilterChip(
-                    selected = vistaActual == VistaActual.HISTORIAL,
-                    onClick = { vistaActual = VistaActual.HISTORIAL },
-                    label = { Text("Historial") },
-                    leadingIcon = {
-                        Icon(Icons.Default.History, contentDescription = null)
-                    }
-                )
-
-                FilterChip(
-                    selected = vistaActual == VistaActual.PROMOCIONES,
-                    onClick = { vistaActual = VistaActual.PROMOCIONES },
-                    label = { Text("Promociones") },
-                    leadingIcon = {
-                        Icon(Icons.Default.LocalOffer, contentDescription = null)
-                    }
-                )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
             when (vistaActual) {
+
+                // ── REGISTRO ──────────────────────────────────────────────
                 VistaActual.REGISTRO -> {
                     Column(
                         modifier = Modifier
@@ -284,122 +233,99 @@ fun MisRecargasScreen() {
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         Text(
-                            text = if (usandoPromocion)
-                                "Registrá una promoción seleccionada."
-                            else
-                                "Registrá tus recargas y lleva control del dinero invertido.",
+                            text  = if (usandoPromocion) "Registrá una promoción seleccionada."
+                            else "Registrá tus recargas y lleva control del dinero invertido.",
                             style = MaterialTheme.typography.bodyMedium
                         )
 
+                        // País
                         ExposedDropdownMenuBox(
-                            expanded = expandedPais,
+                            expanded         = expandedPais,
                             onExpandedChange = { expandedPais = !expandedPais },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier         = Modifier.fillMaxWidth()
                         ) {
                             OutlinedTextField(
-                                value = paisSeleccionado.nombre,
+                                value         = paisSeleccionado.nombre,
                                 onValueChange = {},
-                                readOnly = true,
-                                label = { Text("País") },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Public, contentDescription = null)
-                                },
-                                trailingIcon = {
-                                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedPais)
-                                },
-                                modifier = Modifier
-                                    .menuAnchor()
-                                    .fillMaxWidth(),
-                                singleLine = true
+                                readOnly      = true,
+                                label         = { Text("País") },
+                                leadingIcon   = { Icon(Icons.Default.Public, contentDescription = null) },
+                                trailingIcon  = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedPais) },
+                                modifier      = Modifier.menuAnchor().fillMaxWidth(),
+                                singleLine    = true
                             )
-
                             ExposedDropdownMenu(
-                                expanded = expandedPais,
+                                expanded         = expandedPais,
                                 onDismissRequest = { expandedPais = false }
                             ) {
                                 paises.forEach { pais ->
                                     DropdownMenuItem(
-                                        text = { Text("${pais.nombre} (${pais.codigo})") },
+                                        text    = { Text("${pais.nombre} (${pais.codigo})") },
                                         onClick = {
-                                            paisSeleccionado = pais
-                                            telefono = ""
+                                            paisSeleccionado    = pais
+                                            telefono            = ""
                                             mostrarConfirmacion = false
-                                            expandedPais = false
+                                            expandedPais        = false
                                         }
                                     )
                                 }
                             }
                         }
 
+                        // Teléfono
                         OutlinedTextField(
-                            value = telefono,
+                            value         = telefono,
                             onValueChange = {
-                                if (it.all { char -> char.isDigit() } && it.length <= paisSeleccionado.longitud) {
-                                    telefono = it
+                                if (it.all { c -> c.isDigit() } && it.length <= paisSeleccionado.longitud) {
+                                    telefono            = it
                                     mostrarConfirmacion = false
                                 }
                             },
-                            label = { Text("Número de teléfono") },
-                            leadingIcon = {
-                                Icon(Icons.Default.Phone, contentDescription = null)
-                            },
-                            prefix = {
-                                Text("${paisSeleccionado.codigo} ")
-                            },
-                            isError = telefono.isNotEmpty() && !telefonoValido,
+                            label          = { Text("Número de teléfono") },
+                            leadingIcon    = { Icon(Icons.Default.Phone, contentDescription = null) },
+                            prefix         = { Text("${paisSeleccionado.codigo} ") },
+                            isError        = telefono.isNotEmpty() && !telefonoValido,
                             supportingText = {
-                                if (telefono.isEmpty()) {
-                                    Text("Formato esperado: ${paisSeleccionado.ejemplo}")
-                                } else if (!telefonoValido) {
-                                    Text("Debe tener ${paisSeleccionado.longitud} dígitos")
-                                }
+                                if (telefono.isEmpty()) Text("Formato esperado: ${paisSeleccionado.ejemplo}")
+                                else if (!telefonoValido) Text("Debe tener ${paisSeleccionado.longitud} dígitos")
                             },
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier        = Modifier.fillMaxWidth(),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            singleLine = true
+                            singleLine      = true
                         )
 
+                        // Compañía
                         ExposedDropdownMenuBox(
-                            expanded = expandedCompania,
+                            expanded         = expandedCompania,
                             onExpandedChange = { expandedCompania = !expandedCompania },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier         = Modifier.fillMaxWidth()
                         ) {
                             OutlinedTextField(
-                                value = companiaSeleccionada,
+                                value         = companiaSeleccionada,
                                 onValueChange = {},
-                                readOnly = true,
-                                label = { Text("Compañía Telefónica") },
-                                leadingIcon = {
-                                    Icon(Icons.Default.SimCard, contentDescription = null)
-                                },
-                                trailingIcon = {
-                                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCompania)
-                                },
-                                modifier = Modifier
-                                    .menuAnchor()
-                                    .fillMaxWidth(),
-                                singleLine = true
+                                readOnly      = true,
+                                label         = { Text("Compañía Telefónica") },
+                                leadingIcon   = { Icon(Icons.Default.SimCard, contentDescription = null) },
+                                trailingIcon  = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCompania) },
+                                modifier      = Modifier.menuAnchor().fillMaxWidth(),
+                                singleLine    = true
                             )
-
                             ExposedDropdownMenu(
-                                expanded = expandedCompania,
+                                expanded         = expandedCompania,
                                 onDismissRequest = { expandedCompania = false }
                             ) {
                                 opcionesCompania.forEach { opcion ->
                                     DropdownMenuItem(
-                                        text = { Text(opcion) },
+                                        text    = { Text(opcion) },
                                         onClick = {
-                                            companiaSeleccionada = opcion
+                                            companiaSeleccionada    = opcion
                                             tipoRecargaSeleccionado = ""
-                                            mostrarConfirmacion = false
-
+                                            mostrarConfirmacion     = false
                                             if (promocionSeleccionada != null &&
-                                                promocionSeleccionada?.compania != opcion
-                                            ) {
+                                                promocionSeleccionada?.compania != opcion) {
                                                 promocionSeleccionada = null
-                                                monto = ""
+                                                monto                 = ""
                                             }
-
                                             expandedCompania = false
                                         }
                                     )
@@ -408,89 +334,75 @@ fun MisRecargasScreen() {
                         }
 
                         if (!usandoPromocion) {
+                            // Monto
                             OutlinedTextField(
-                                value = monto,
+                                value         = monto,
                                 onValueChange = {
-                                    if (it.all { char -> char.isDigit() }) {
-                                        monto = it
+                                    if (it.all { c -> c.isDigit() }) {
+                                        monto               = it
                                         mostrarConfirmacion = false
                                     }
                                 },
-                                label = { Text("Monto de la recarga") },
-                                leadingIcon = {
-                                    Icon(Icons.Default.AttachMoney, contentDescription = null)
-                                },
-                                prefix = { Text("C$ ") },
-                                isError = monto.isNotEmpty() && !montoValido,
+                                label          = { Text("Monto de la recarga") },
+                                leadingIcon    = { Icon(Icons.Default.AttachMoney, contentDescription = null) },
+                                prefix         = { Text("C$ ") },
+                                isError        = monto.isNotEmpty() && !montoValido,
                                 supportingText = {
-                                    if (monto.isNotEmpty() && !montoValido) {
-                                        Text("Ingrese un monto válido")
-                                    }
+                                    if (monto.isNotEmpty() && !montoValido) Text("Ingrese un monto válido")
                                 },
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier        = Modifier.fillMaxWidth(),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                singleLine = true
+                                singleLine      = true
                             )
 
+                            // Tipo de recarga
                             ExposedDropdownMenuBox(
-                                expanded = expandedTipoRecarga,
+                                expanded         = expandedTipoRecarga,
                                 onExpandedChange = {
-                                    if (companiaSeleccionada.isNotEmpty()) {
+                                    if (companiaSeleccionada.isNotEmpty())
                                         expandedTipoRecarga = !expandedTipoRecarga
-                                    }
                                 },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 OutlinedTextField(
-                                    value = tipoRecargaSeleccionado,
+                                    value         = tipoRecargaSeleccionado,
                                     onValueChange = {},
-                                    readOnly = true,
-                                    label = { Text("Tipo de recarga") },
-                                    leadingIcon = {
-                                        Icon(Icons.Default.Wifi, contentDescription = null)
+                                    readOnly      = true,
+                                    label         = { Text("Tipo de recarga") },
+                                    leadingIcon   = { Icon(Icons.Default.Wifi, contentDescription = null) },
+                                    placeholder   = {
+                                        if (companiaSeleccionada.isEmpty()) Text("Seleccione primero la compañía")
                                     },
-                                    placeholder = {
-                                        if (companiaSeleccionada.isEmpty()) {
-                                            Text("Seleccione primero la compañía")
-                                        }
-                                    },
-                                    trailingIcon = {
-                                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedTipoRecarga)
-                                    },
-                                    modifier = Modifier
-                                        .menuAnchor()
-                                        .fillMaxWidth(),
-                                    enabled = companiaSeleccionada.isNotEmpty(),
-                                    singleLine = true
+                                    trailingIcon  = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedTipoRecarga) },
+                                    modifier      = Modifier.menuAnchor().fillMaxWidth(),
+                                    enabled       = companiaSeleccionada.isNotEmpty(),
+                                    singleLine    = true
                                 )
-
                                 ExposedDropdownMenu(
-                                    expanded = expandedTipoRecarga,
+                                    expanded         = expandedTipoRecarga,
                                     onDismissRequest = { expandedTipoRecarga = false }
                                 ) {
                                     tiposDisponibles.forEach { tipo ->
                                         DropdownMenuItem(
-                                            text = { Text(tipo) },
+                                            text    = { Text(tipo) },
                                             onClick = {
                                                 tipoRecargaSeleccionado = tipo
-                                                mostrarConfirmacion = false
-                                                expandedTipoRecarga = false
+                                                mostrarConfirmacion     = false
+                                                expandedTipoRecarga     = false
                                             }
                                         )
                                     }
                                 }
                             }
                         } else {
-                            ElevatedCard(
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
+                            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
                                 Column(
                                     modifier = Modifier.padding(16.dp),
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     Text(
-                                        text = "Promoción seleccionada",
-                                        style = MaterialTheme.typography.titleMedium,
+                                        text       = "Promoción seleccionada",
+                                        style      = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold
                                     )
                                     Text("Compañía: ${promocionSeleccionada?.compania}")
@@ -498,104 +410,69 @@ fun MisRecargasScreen() {
                                     Text("Precio: C$ ${promocionSeleccionada?.precio}")
                                     Text("Incluye: ${promocionSeleccionada?.descripcion}")
                                     Text("Vigencia: ${promocionSeleccionada?.vigencia}")
-
-                                    TextButton(
-                                        onClick = {
-                                            promocionSeleccionada = null
-                                            monto = ""
-                                            tipoRecargaSeleccionado = ""
-                                            mostrarConfirmacion = false
-                                        }
-                                    ) {
-                                        Text("Quitar promoción")
-                                    }
+                                    TextButton(onClick = {
+                                        promocionSeleccionada   = null
+                                        monto                   = ""
+                                        tipoRecargaSeleccionado = ""
+                                        mostrarConfirmacion     = false
+                                    }) { Text("Quitar promoción") }
                                 }
                             }
                         }
 
                         Button(
-                            onClick = {
-                                val fechaActual = SimpleDateFormat(
-                                    "dd/MM/yyyy hh:mm a",
-                                    Locale.getDefault()
-                                ).format(Date())
-
-                                val detalle = if (usandoPromocion) {
+                            onClick  = {
+                                val fechaActual = SimpleDateFormat("dd/MM/yyyy hh:mm a", Locale.getDefault()).format(Date())
+                                val detalle     = if (usandoPromocion)
                                     "${promocionSeleccionada?.nombre} - ${promocionSeleccionada?.descripcion}"
-                                } else {
-                                    tipoRecargaSeleccionado
-                                }
-
-                                val montoFinal = if (usandoPromocion) {
-                                    promocionSeleccionada?.precio ?: 0
-                                } else {
-                                    monto.toIntOrNull() ?: 0
-                                }
-
-                                val tipoFinal = if (usandoPromocion) {
-                                    "Promoción"
-                                } else {
-                                    tipoRecargaSeleccionado
-                                }
+                                else tipoRecargaSeleccionado
+                                val montoFinal  = if (usandoPromocion) promocionSeleccionada?.precio ?: 0
+                                else monto.toIntOrNull() ?: 0
+                                val tipoFinal   = if (usandoPromocion) "Promoción" else tipoRecargaSeleccionado
 
                                 historial = listOf(
                                     HistorialRecarga(
                                         telefonoCompleto = "${paisSeleccionado.codigo} $telefono",
-                                        pais = paisSeleccionado.nombre,
-                                        compania = companiaSeleccionada,
-                                        tipo = tipoFinal,
-                                        monto = montoFinal,
-                                        detalle = detalle,
-                                        fecha = fechaActual
+                                        pais             = paisSeleccionado.nombre,
+                                        compania         = companiaSeleccionada,
+                                        tipo             = tipoFinal,
+                                        monto            = montoFinal,
+                                        detalle          = detalle,
+                                        fecha            = fechaActual
                                     )
                                 ) + historial
 
-                                mostrarConfirmacion = true
-
-                                telefono = ""
-                                monto = ""
+                                mostrarConfirmacion     = true
+                                telefono                = ""
+                                monto                   = ""
                                 tipoRecargaSeleccionado = ""
-                                promocionSeleccionada = null
+                                promocionSeleccionada   = null
                             },
-                            enabled = puedeRegistrar,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp)
+                            enabled  = puedeRegistrar,
+                            modifier = Modifier.fillMaxWidth().height(56.dp)
                         ) {
                             Text(
-                                if (usandoPromocion) "REGISTRAR PROMOCIÓN"
-                                else "REGISTRAR RECARGA",
+                                if (usandoPromocion) "REGISTRAR PROMOCIÓN" else "REGISTRAR RECARGA",
                                 fontWeight = FontWeight.Bold
                             )
                         }
 
                         AnimatedVisibility(
                             visible = mostrarConfirmacion,
-                            enter = fadeIn() + expandVertically()
+                            enter   = fadeIn() + expandVertically()
                         ) {
-                            ElevatedCard(
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
+                            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
                                 Row(
-                                    modifier = Modifier.padding(16.dp),
+                                    modifier          = Modifier.padding(16.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Icon(
-                                        Icons.Default.CheckCircle,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(36.dp)
-                                    )
+                                    Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(36.dp))
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Column {
+                                        Text("¡Registro realizado con éxito!", fontWeight = FontWeight.Bold)
                                         Text(
-                                            "¡Registro realizado con éxito!",
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Text(
-                                            if (usandoPromocion)
-                                                "La promoción fue registrada correctamente."
-                                            else
-                                                "La recarga fue registrada correctamente."
+                                            if (usandoPromocion) "La promoción fue registrada correctamente."
+                                            else "La recarga fue registrada correctamente."
                                         )
                                     }
                                 }
@@ -604,67 +481,61 @@ fun MisRecargasScreen() {
                     }
                 }
 
+                // ── HISTORIAL ─────────────────────────────────────────────
                 VistaActual.HISTORIAL -> {
                     if (historial.isEmpty()) {
-                        Card(
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
+                        Card(modifier = Modifier.fillMaxWidth()) {
+                            Column(
+                                modifier = Modifier.padding(20.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(Icons.Default.ReceiptLong, contentDescription = null)
+                                Text("Aún no hay recargas registradas.", fontWeight = FontWeight.Bold)
+                                Text("Cuando registres una recarga o promoción, aparecerá aquí.")
+                            }
+                        }
+                    } else if (historialFiltrado.isEmpty()) {
+                        Card(modifier = Modifier.fillMaxWidth()) {
                             Column(
                                 modifier = Modifier.padding(20.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Icon(Icons.Default.ReceiptLong, contentDescription = null)
                                 Text(
-                                    text = "Aún no hay recargas registradas.",
+                                    "Sin resultados para \"${tabSeleccionado.etiqueta}\".",
                                     fontWeight = FontWeight.Bold
                                 )
-                                Text("Cuando registres una recarga o promoción, aparecerá aquí.")
+                                Text("No tenés recargas de este tipo registradas todavía.")
                             }
                         }
                     } else {
                         LazyColumn(
                             verticalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.fillMaxSize()
+                            modifier            = Modifier.fillMaxSize()
                         ) {
-                            items(historial) { item ->
-                                ElevatedCard(
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
+                            items(historialFiltrado) { item ->
+                                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
                                     Column(
                                         modifier = Modifier.padding(16.dp),
                                         verticalArrangement = Arrangement.spacedBy(6.dp)
                                     ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Icon(
-                                                Icons.Default.History,
-                                                contentDescription = null
-                                            )
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.History, contentDescription = null)
                                             Spacer(modifier = Modifier.width(8.dp))
                                             Text(
-                                                text = item.tipo,
+                                                text       = item.tipo,
                                                 fontWeight = FontWeight.Bold,
-                                                style = MaterialTheme.typography.titleMedium
+                                                style      = MaterialTheme.typography.titleMedium
                                             )
                                         }
-
                                         HorizontalDivider()
-
                                         Text("Número: ${item.telefonoCompleto}")
                                         Text("País: ${item.pais}")
                                         Text("Compañía: ${item.compania}")
                                         Text("Monto: C$ ${item.monto}")
                                         Text("Detalle: ${item.detalle}")
-
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Icon(
-                                                Icons.Default.AccessTime,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(18.dp)
-                                            )
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.AccessTime, contentDescription = null, modifier = Modifier.size(18.dp))
                                             Spacer(modifier = Modifier.width(6.dp))
                                             Text(item.fecha)
                                         }
@@ -675,46 +546,37 @@ fun MisRecargasScreen() {
                     }
                 }
 
+                // ── PROMOCIONES ───────────────────────────────────────────
                 VistaActual.PROMOCIONES -> {
-                    Column(
-                        modifier = Modifier.fillMaxSize()
-                    ) {
+                    Column(modifier = Modifier.fillMaxSize()) {
                         Text(
-                            text = "Seleccioná una promoción para registrarla más rápido.",
+                            text  = "Seleccioná una promoción para registrarla más rápido.",
                             style = MaterialTheme.typography.bodyMedium
                         )
-
+                        Spacer(modifier = Modifier.height(8.dp))
+                        AssistChip(
+                            onClick = {},
+                            label   = {
+                                Text(
+                                    if (companiaSeleccionada.isBlank()) "Mostrando todas las compañías"
+                                    else "Filtrando por: $companiaSeleccionada"
+                                )
+                            }
+                        )
                         Spacer(modifier = Modifier.height(12.dp))
-
-                        if (companiaSeleccionada.isBlank()) {
-                            AssistChip(
-                                onClick = {},
-                                label = { Text("Mostrando promociones de todas las compañías") }
-                            )
-                        } else {
-                            AssistChip(
-                                onClick = {},
-                                label = { Text("Filtrando por: $companiaSeleccionada") }
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
                         LazyColumn(
                             verticalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.fillMaxSize()
+                            modifier            = Modifier.fillMaxSize()
                         ) {
                             items(promocionesFiltradas) { promo ->
-                                ElevatedCard(
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
+                                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
                                     Column(
                                         modifier = Modifier.padding(16.dp),
                                         verticalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         Text(
-                                            text = promo.nombre,
-                                            style = MaterialTheme.typography.titleMedium,
+                                            text       = promo.nombre,
+                                            style      = MaterialTheme.typography.titleMedium,
                                             fontWeight = FontWeight.Bold
                                         )
                                         Text("Compañía: ${promo.compania}")
@@ -722,20 +584,17 @@ fun MisRecargasScreen() {
                                         Text("Precio: C$ ${promo.precio}")
                                         Text("Incluye: ${promo.descripcion}")
                                         Text("Vigencia: ${promo.vigencia}")
-
                                         Button(
-                                            onClick = {
-                                                promocionSeleccionada = promo
-                                                companiaSeleccionada = promo.compania
-                                                monto = promo.precio.toString()
+                                            onClick  = {
+                                                promocionSeleccionada   = promo
+                                                companiaSeleccionada    = promo.compania
+                                                monto                   = promo.precio.toString()
                                                 tipoRecargaSeleccionado = "Promoción"
-                                                mostrarConfirmacion = false
-                                                vistaActual = VistaActual.REGISTRO
+                                                mostrarConfirmacion     = false
+                                                vistaActual             = VistaActual.REGISTRO
                                             },
                                             modifier = Modifier.fillMaxWidth()
-                                        ) {
-                                            Text("Seleccionar promoción")
-                                        }
+                                        ) { Text("Seleccionar promoción") }
                                     }
                                 }
                             }
@@ -746,3 +605,4 @@ fun MisRecargasScreen() {
         }
     }
 }
+ 
