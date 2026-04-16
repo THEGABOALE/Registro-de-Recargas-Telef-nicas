@@ -14,7 +14,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,7 +22,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import ni.edu.uam.misrecargasapp.ui.theme.MisRecargasAppTheme
 
 class MainActivity : ComponentActivity() {
@@ -31,7 +30,6 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MisRecargasAppTheme {
-                // Llamamos a la pantalla principal de recargas
                 MisRecargasScreen()
             }
         }
@@ -41,7 +39,7 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MisRecargasScreen() {
-    // --- ESTADOS (Criterio: Manejo de interacción y estado - 8 pts) ---
+
     var telefono by remember { mutableStateOf("") }
     var monto by remember { mutableStateOf("") }
     var companiaSeleccionada by remember { mutableStateOf("") }
@@ -50,19 +48,20 @@ fun MisRecargasScreen() {
 
     val opcionesCompania = listOf("Claro", "Tigo", "Movistar")
 
+    // Validaciones
+    val telefonoValido = telefono.length == 8
+    val montoValido = monto.isNotEmpty() && monto.toIntOrNull() != null && monto.toInt() > 0
+
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
                     Text("Mis Recargas", fontWeight = FontWeight.ExtraBold)
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+                }
             )
         }
     ) { innerPadding ->
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -73,32 +72,50 @@ fun MisRecargasScreen() {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
 
-            // --- CAMPOS DE ENTRADA (Material Design 3 - 6 pts) ---
 
-            // Campo Teléfono
             OutlinedTextField(
                 value = telefono,
-                onValueChange = { telefono = it },
+                onValueChange = {
+                    if (it.all { char -> char.isDigit() } && it.length <= 8) {
+                        telefono = it
+                    }
+                },
                 label = { Text("Número de teléfono") },
                 leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
-                modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                singleLine = true
-            )
-
-            // Campo Monto
-            OutlinedTextField(
-                value = monto,
-                onValueChange = { monto = it },
-                label = { Text("Monto de la recarga") },
-                prefix = { Text("C$ ", fontWeight = FontWeight.Bold) },
-                leadingIcon = { Icon(Icons.Default.Payments, contentDescription = null) },
+                isError = telefono.isNotEmpty() && !telefonoValido,
+                supportingText = {
+                    if (telefono.isNotEmpty() && !telefonoValido) {
+                        Text("Debe tener 8 dígitos")
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true
             )
 
-            // Selector de Compañía (Dropdown)
+
+            OutlinedTextField(
+                value = monto,
+                onValueChange = {
+                    if (it.all { char -> char.isDigit() }) {
+                        monto = it
+                    }
+                },
+                label = { Text("Monto de la recarga") },
+                prefix = { Text("C$ ") },
+                leadingIcon = { Icon(Icons.Default.AttachMoney, contentDescription = null) },
+                isError = monto.isNotEmpty() && !montoValido,
+                supportingText = {
+                    if (monto.isNotEmpty() && !montoValido) {
+                        Text("Ingrese un monto válido")
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true
+            )
+
+
             ExposedDropdownMenuBox(
                 expanded = expanded,
                 onExpandedChange = { expanded = !expanded },
@@ -109,9 +126,12 @@ fun MisRecargasScreen() {
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("Compañía Telefónica") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                    },
                     modifier = Modifier.menuAnchor().fillMaxWidth()
                 )
+
                 ExposedDropdownMenu(
                     expanded = expanded,
                     onDismissRequest = { expanded = false }
@@ -130,31 +150,26 @@ fun MisRecargasScreen() {
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // --- BOTÓN DE ACCIÓN ---
+
             Button(
                 onClick = {
-                    if (telefono.isNotEmpty() && monto.isNotEmpty() && companiaSeleccionada.isNotEmpty()) {
-                        mostrarConfirmacion = true
-                    }
+                    mostrarConfirmacion = true
                 },
+                enabled = telefonoValido && montoValido && companiaSeleccionada.isNotEmpty(),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
-                shape = MaterialTheme.shapes.medium
+                    .height(56.dp)
             ) {
                 Text("REGISTRAR RECARGA", fontWeight = FontWeight.Bold)
             }
 
-            // --- CARD DINÁMICA (Criterio: Implementación funcional - 6 pts) ---
+
             AnimatedVisibility(
                 visible = mostrarConfirmacion,
                 enter = fadeIn() + expandVertically()
             ) {
                 ElevatedCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.elevatedCardColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer
-                    )
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
                         modifier = Modifier.padding(16.dp),
@@ -163,20 +178,14 @@ fun MisRecargasScreen() {
                         Icon(
                             Icons.Default.CheckCircle,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(40.dp)
                         )
                         Spacer(modifier = Modifier.width(16.dp))
                         Column {
-                            Text(
-                                "¡Recarga Registrada!",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                            Text("Teléfono: $telefono", style = MaterialTheme.typography.bodyMedium)
-                            Text("Monto: C$ $monto", style = MaterialTheme.typography.bodyMedium)
-                            Text("Compañía: $companiaSeleccionada", style = MaterialTheme.typography.bodySmall)
+                            Text("¡Recarga Registrada!", fontWeight = FontWeight.Bold)
+                            Text("Teléfono: $telefono")
+                            Text("Monto: C$ $monto")
+                            Text("Compañía: $companiaSeleccionada")
                         }
                     }
                 }
