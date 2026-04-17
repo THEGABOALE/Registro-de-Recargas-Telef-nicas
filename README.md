@@ -9,7 +9,9 @@
   Este proyecto está desarrollado para resolver el Caso 2, enfocado en una aplicación de registro de recargas telefónicas que permite llevar control del dinero invertido en saldo y paquetes.
 </p>
 
-<h2 align="center"><strong>Contributors</strong></h2>
+---
+
+<h3 align="center"><strong><sub></sub>Contributors</strong></h3>
 
 <p align="center">
   <a href="https://github.com/THEGABOALE/Registro-de-Recargas-Telef-nicas/graphs/contributors">
