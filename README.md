@@ -11,10 +11,10 @@
 
 ---
 
-<h3 align="center"><strong><sub></sub>Contributors</strong></h3>
+<h3 align="center">Contributors</h3>
 
 <p align="center">
   <a href="https://github.com/THEGABOALE/Registro-de-Recargas-Telef-nicas/graphs/contributors">
-    <img src="https://contrib.rocks/image?repo=THEGABOALE/Registro-de-Recargas-Telef-nicas"/>
+    <img src="https://contrib.rocks/image?repo=THEGABOALE/Registro-de-Recargas-Telef-nicas&v=2" />
   </a>
 </p>
